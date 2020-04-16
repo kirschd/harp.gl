@@ -394,28 +394,34 @@ describe("MapView Styling Test", function() {
             testCases: { [name: string]: SolidLineStyle["attr"] },
             lineGeometry: Feature = straightLine
         ) {
-            // tslint:disable-next-line:forin
+            // tslint:disable-next-line: forin
             for (const testCase in testCases) {
-                const attr: SolidLineStyle["attr"] = testCases[testCase]!;
-                mapViewFeaturesRenderingTest(`solid-line-styling-${testCase}`, {
-                    geoJson: {
-                        type: "FeatureCollection",
-                        features: [lineGeometry, referenceBackground]
-                    },
-                    theme: {
-                        styles: {
-                            geojson: [
-                                referenceBackroundStyle,
-                                {
-                                    when: "$geometryType == 'line'",
-                                    technique: "solid-line",
-                                    attr
-                                }
-                            ]
+                for (const clipping of [true, false]) {
+                    const postfix = clipping === true ? "" : "-no-clipping";
+                    const attr: SolidLineStyle["attr"] = JSON.parse(
+                        JSON.stringify(testCases[testCase]!)
+                    );
+                    attr!.clipping = clipping;
+                    mapViewFeaturesRenderingTest(`solid-line-styling-${testCase}${postfix}`, {
+                        geoJson: {
+                            type: "FeatureCollection",
+                            features: [lineGeometry, referenceBackground]
+                        },
+                        theme: {
+                            styles: {
+                                geojson: [
+                                    referenceBackroundStyle,
+                                    {
+                                        when: "$geometryType == 'line'",
+                                        technique: "solid-line",
+                                        attr
+                                    }
+                                ]
+                            }
                         }
-                    }
-                    // grid: 100
-                });
+                        // grid: 100
+                    });
+                }
             }
         }
         describe("solid-line technique", function() {
@@ -604,7 +610,8 @@ describe("MapView Styling Test", function() {
                                     color: "#E3D49A",
                                     outlineColor: "#3A4C69",
                                     lineWidth: 40,
-                                    outlineWidth: 10
+                                    outlineWidth: 10,
+                                    clipping: true
                                 }
                             },
                             {
