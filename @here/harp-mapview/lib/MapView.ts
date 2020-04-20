@@ -31,6 +31,7 @@ import {
     TilingScheme,
     Vector3Like
 } from "@here/harp-geoutils";
+import { SolidLineMaterial } from "@here/harp-materials";
 import {
     assert,
     getOptionValue,
@@ -829,6 +830,9 @@ export class MapView extends THREE.EventDispatcher {
     private m_env: MapEnv = new MapEnv({});
 
     private m_enableMixedLod: boolean | undefined;
+    private readonly m_renderOrderStencilValues = new Map<number, number>();
+    private m_stencilValue: number = 0;
+
     /**
      * Constructs a new `MapView` with the given options or canvas element.
      *
@@ -1431,6 +1435,7 @@ export class MapView extends THREE.EventDispatcher {
      */
     addEventListener(type: MapViewEventNames, listener: (event: RenderEvent) => void): void;
 
+    /** @override */
     addEventListener(type: string, listener: any): void {
         super.addEventListener(type, listener);
     }
@@ -1451,6 +1456,7 @@ export class MapView extends THREE.EventDispatcher {
      */
     removeEventListener(type: MapViewEventNames, listener: (event: RenderEvent) => void): void;
 
+    /** @override */
     removeEventListener(type: string, listener: any): void {
         super.removeEventListener(type, listener);
     }
@@ -2539,6 +2545,27 @@ export class MapView extends THREE.EventDispatcher {
         return this.m_fog;
     }
 
+    private getStencilValue(renderOrder: number) {
+        if (!this.m_drawing) {
+            throw new Error("failed to get the stencil value");
+        }
+
+        return (
+            this.m_renderOrderStencilValues.get(renderOrder) ??
+            this.allocateStencilValue(renderOrder)
+        );
+    }
+
+    private allocateStencilValue(renderOrder: number) {
+        if (!this.m_drawing) {
+            throw new Error("failed to allocate stencil value");
+        }
+
+        const stencilValue = this.m_stencilValue++;
+        this.m_renderOrderStencilValues.set(renderOrder, stencilValue);
+        return stencilValue;
+    }
+
     private setPostEffects() {
         // First clear all the effects, then enable them from what is specified.
         this.mapRenderingManager.bloom.enabled = false;
@@ -2983,6 +3010,9 @@ export class MapView extends THREE.EventDispatcher {
         RENDER_EVENT.time = frameStartTime;
         this.dispatchEvent(RENDER_EVENT);
 
+        this.m_stencilValue = 0;
+        this.m_renderOrderStencilValues.clear();
+
         ++this.m_frameNumber;
 
         let currentFrameEvent: FrameStats | undefined;
@@ -3244,6 +3274,13 @@ export class MapView extends THREE.EventDispatcher {
                 if (!this.processTileObjectFeatures(tile, object)) {
                     continue;
                 }
+
+                // TODO: acquire a new style value of if transparent
+                const material: SolidLineMaterial | undefined = (object as any).material;
+                if (object.renderOrder !== undefined && material instanceof SolidLineMaterial) {
+                    material.stencilRef = this.getStencilValue(object.renderOrder);
+                }
+
                 object.position.copy(tile.center);
                 if (object.displacement !== undefined) {
                     object.position.add(object.displacement);
