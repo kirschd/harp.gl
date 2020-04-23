@@ -4,28 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { webMercatorTilingScheme } from "@here/harp-geoutils";
-import { DataProvider, TileDataSource, TileFactory } from "@here/harp-mapview-decoder";
-import { GeoJsonTile } from "./GeoJsonTile";
-
-/**
- * Parameters to initialize the data source.
- */
-export interface GeoJsonDataSourceParameters {
-    dataProvider: DataProvider;
-
-    /**
-     * The unique name of this [[GeoJsonDataSource]].
-     */
-    name?: string;
-
-    /**
-     * The name of the [[StyleSet]] that this [[GeoJsonDataSource]] should use for decoding.
-     *
-     *  @default "geojson"
-     */
-    styleSetName?: string;
-}
+import {
+    OmvDataSource,
+    OmvWithCustomDataProvider,
+    OmvWithRestClientParams
+} from "@here/harp-omv-datasource";
 
 /**
  * `GeoJsonDataSource` is used for the visualization of geometric objects provided in the GeoJSON
@@ -45,26 +28,13 @@ export interface GeoJsonDataSourceParameters {
  * geoJsonDataSource.selectTile(geoJsonDataTile, mapView.projection);
  * </pre>
  */
-export class GeoJsonDataSource extends TileDataSource<GeoJsonTile> {
+export class GeoJsonDataSource extends OmvDataSource {
     /**
      * Default constructor.
      *
      * @param params Data source configuration's parameters.
      */
-    constructor(readonly params: GeoJsonDataSourceParameters) {
-        super(new TileFactory(GeoJsonTile), {
-            styleSetName: params.styleSetName || "geojson",
-            name: params.name,
-            tilingScheme: webMercatorTilingScheme,
-            dataProvider: params.dataProvider,
-            concurrentDecoderServiceName: "geojson-tile-decoder",
-            storageLevelOffset: -1
-        });
-    }
-
-    /** @override */
-    async connect(): Promise<void> {
-        await super.connect();
-        await this.decoder.connect();
+    constructor(readonly params: OmvWithRestClientParams | OmvWithCustomDataProvider) {
+        super({ styleSetName: "geojson", ...params });
     }
 }
