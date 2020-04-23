@@ -80,6 +80,7 @@ uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 uniform float extrusionWidth;
 uniform float outlineWidth;
+uniform float offset;
 uniform vec2 drawRange;
 
 #ifdef USE_DISPLACEMENTMAP
@@ -117,6 +118,8 @@ void main() {
     // Calculate the extruded vertex position (and scale the extrusion direction).
     vec3 pos = extrudeLine(
         position, linePos, extrusionWidth + outlineWidth, bitangent, tangent, extrusionDir);
+
+    pos += bitangent.xyz * offset;
 
     // Store the normalized extrusion coordinates in vCoords (with their ranges in vRange).
     vRange = vec3(extrusionCoord.z, extrusionWidth, extrusionFactor);
@@ -370,6 +373,11 @@ export interface SolidLineMaterialParameters
      * Size of the gaps between dashed segments.
      */
     gapSize?: number;
+
+    /**
+     * How much to offset
+     */
+    offset?: number;
 }
 
 /**
@@ -385,6 +393,7 @@ export class SolidLineMaterial extends THREE.RawShaderMaterial
     static DEFAULT_DRAW_RANGE_END: number = 1.0;
     static DEFAULT_DASH_SIZE: number = 1.0;
     static DEFAULT_GAP_SIZE: number = 1.0;
+    static DEFAULT_OFFSET: number = 0.0;
 
     /**
      * @hidden
@@ -443,6 +452,7 @@ export class SolidLineMaterial extends THREE.RawShaderMaterial
                     ),
                     extrusionWidth: new THREE.Uniform(SolidLineMaterial.DEFAULT_WIDTH),
                     outlineWidth: new THREE.Uniform(SolidLineMaterial.DEFAULT_OUTLINE_WIDTH),
+                    offset: new THREE.Uniform(SolidLineMaterial.DEFAULT_OFFSET),
                     opacity: new THREE.Uniform(SolidLineMaterial.DEFAULT_OPACITY),
                     tileSize: new THREE.Uniform(new THREE.Vector2()),
                     fadeNear: new THREE.Uniform(FadingFeature.DEFAULT_FADE_NEAR),
@@ -538,6 +548,7 @@ export class SolidLineMaterial extends THREE.RawShaderMaterial
             if (params.fog !== undefined) {
                 this.fog = params.fog;
             }
+            this.offset = params.offset ?? 0;
         }
         // ShaderMaterial overrides requires invalidation cause super c-tor may set this
         // properties before related `defines` and `uniforms` were created.
@@ -565,6 +576,18 @@ export class SolidLineMaterial extends THREE.RawShaderMaterial
      */
     get fog(): boolean {
         return this.m_fog && getShaderMaterialDefine(this, "USE_FOG") === true;
+    }
+
+    set offset(offset: number) {
+        // Setting opacity before uniform being created requires late invalidation,
+        // call to invalidateOpacity() is done at the end of c-tor.
+        if (this.uniforms !== undefined) {
+            this.uniforms.offset.value = offset;
+        }
+    }
+
+    get offset(): number {
+        return this.uniforms.offset.value as number;
     }
 
     /**

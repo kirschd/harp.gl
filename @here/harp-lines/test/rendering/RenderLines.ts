@@ -281,9 +281,14 @@ describe("Rendering lines: ", function() {
         await ibct.assertCanvasMatchesReference(canvas, `${name}`);
     }
 
-    it("renders solid lines - lineWidth: 1", async function(this: Mocha.Context) {
+    it("renders solid lines - lineWidth: 2", async function(this: Mocha.Context) {
         const lineStyle = { lineWidth: 2, color: "#FFF" };
         await renderLines(linesConfig, this, "solid-lines-1px", lineStyle);
+    });
+
+    it("renders solid lines - lineWidth: 2 - offset: 1", async function(this: Mocha.Context) {
+        const lineStyle = { lineWidth: 2, color: "#FFF", offset: 1 };
+        await renderLines(linesConfig, this, "solid-lines-1px-offset-1", lineStyle);
     });
 
     it("renders undisplaced solid lines - perspective camera", async function(this: Mocha.Context) {
